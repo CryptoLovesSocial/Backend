@@ -24,7 +24,7 @@ var (
 )
 
 type Fundraiser struct {
-	NgoID                  string `json:"pk"`
+	NgoId                  string `json:"pk"`
 	FundraiserId           string `json:"sk"`
 	FundraiserTitle        string `json:"fundraiserTitle"`
 	FundraiserCause        string `json:"fundraiserCause"`
@@ -35,6 +35,10 @@ type Fundraiser struct {
 }
 
 func FetchFundraiser(ngoId string, fundraiserId string, tableName string, dynaClient dynamodbiface.DynamoDBAPI) (*Fundraiser, error) {
+	//Modifying the key for DynamoDB
+	ngoId = "Ngo" + ngoId
+	fundraiserId = "Fundraiser" + fundraiserId
+
 	//Macking Call for DynamoDB
 	input := &dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
@@ -63,19 +67,24 @@ func FetchFundraiser(ngoId string, fundraiserId string, tableName string, dynaCl
 	return item, nil
 }
 func FetchFundraisers(ngoId string, tableName string, dynaClient dynamodbiface.DynamoDBAPI) (*[]Fundraiser, error) {
-	input := &dynamodb.GetItemInput{
-		Key: map[string]*dynamodb.AttributeValue{
-			"pk": {
+	//Modifying the key for DynamoDB Storage
+	ngoId = "Ngo" + ngoId
+
+	//Macking Call for DynamoDB
+	input := &dynamodb.QueryInput{
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":pk": {
 				S: aws.String(ngoId),
 			},
-			"sk": {
-				S: aws.String("fundraiser"),
+			":sk": {
+				S: aws.String("Fundraiser"),
 			},
 		},
-		TableName: aws.String(tableName),
+		KeyConditionExpression: aws.String("pk = :pk AND begins_with(sk, :sk)"),
+		TableName:              aws.String(tableName),
 	}
 
-	result, err := dynaClient.GetItem(input)
+	result, err := dynaClient.Query(input)
 	if err != nil {
 		log.Println("err1")
 		log.Println(err)
@@ -83,13 +92,14 @@ func FetchFundraisers(ngoId string, tableName string, dynaClient dynamodbiface.D
 
 	}
 
-	item := new([]Fundraiser)
-	err = dynamodbattribute.UnmarshalMap(result.Item, item)
+	var items *[]Fundraiser
+	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &items)
+
 	if err != nil {
-		log.Println("err2")
+		log.Println(err)
 		return nil, errors.New(ErrorFailedToUnmarshalRecord)
 	}
-	return item, nil
+	return items, nil
 }
 func CreateFundraiser(req events.APIGatewayProxyRequest, tableName string, dynaClient dynamodbiface.DynamoDBAPI) (
 	*Fundraiser,
@@ -100,6 +110,11 @@ func CreateFundraiser(req events.APIGatewayProxyRequest, tableName string, dynaC
 	if err := json.Unmarshal([]byte(req.Body), &u); err != nil {
 		return nil, errors.New(ErrorInvalidUserData)
 	}
+
+	//Modifying the key for DynamoDB Storage
+	u.NgoId = "Ngo" + u.NgoId
+	u.FundraiserId = "Fundraiser" + u.FundraiserId
+
 	//Marshaling the data
 	av, err := dynamodbattribute.MarshalMap(u)
 	if err != nil {
@@ -126,8 +141,9 @@ func UpdateFundraiser(req events.APIGatewayProxyRequest, tableName string, dynaC
 	if err := json.Unmarshal([]byte(req.Body), &u); err != nil {
 		return nil, errors.New(ErrorInvalidUserData)
 	}
+
 	// Check if Fundraiser exists
-	currentFundraiser, _ := FetchFundraiser(u.NgoID, u.FundraiserId, tableName, dynaClient)
+	currentFundraiser, _ := FetchFundraiser(u.NgoId, u.FundraiserId, tableName, dynaClient)
 	if currentFundraiser != nil && len(currentFundraiser.FundraiserId) == 0 {
 		return nil, errors.New(ErrorUserDoesNotExists)
 	}
@@ -151,6 +167,10 @@ func DeleteFundraiser(req events.APIGatewayProxyRequest, tableName string, dynaC
 	//ngoId and fundraiserId from req
 	ngoId := req.QueryStringParameters["ngoId"]
 	fundraiserId := req.QueryStringParameters["fundraiserId"]
+
+	//Modifying the key for DynamoDB 
+	ngoId = "Ngo" + ngoId
+	fundraiserId = "Fundraiser" + fundraiserId
 
 	//Deleting the Fundraiser
 	input := &dynamodb.DeleteItemInput{

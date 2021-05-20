@@ -24,7 +24,7 @@ var (
 )
 
 type Ngo struct {
-	NgoID          string `json:"pk"`
+	NgoId          string `json:"pk"`
 	SK             string `json:"sk"`
 	NgoName        string `json:"ngoName"`
 	NgoAdress      string `json:"ngoAdress"`
@@ -35,6 +35,9 @@ type Ngo struct {
 }
 
 func FetchNgo(ngoId string, tableName string, dynaClient dynamodbiface.DynamoDBAPI) (*Ngo, error) {
+	//Modifying the key for DynamoDB Storage
+	ngoId = "Ngo" + ngoId
+
 	//Macking Call for DynamoDB
 	input := &dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
@@ -42,7 +45,7 @@ func FetchNgo(ngoId string, tableName string, dynaClient dynamodbiface.DynamoDBA
 				S: aws.String(ngoId),
 			},
 			"sk": {
-				S: aws.String("details"),
+				S: aws.String("Details"),
 			},
 		},
 		TableName: aws.String(tableName),
@@ -76,6 +79,10 @@ func CreateNgo(req events.APIGatewayProxyRequest, tableName string, dynaClient d
 		println(err)
 		return nil, errors.New(ErrorInvalidUserData)
 	}
+
+	//Modifying the key for DynamoDB Storage
+	u.NgoId = "Ngo" + u.NgoId
+	u.SK = "Details"
 	//Marshaling the data
 	av, err := dynamodbattribute.MarshalMap(u)
 	if err != nil {
@@ -107,8 +114,8 @@ func UpdateNgo(req events.APIGatewayProxyRequest, tableName string, dynaClient d
 		return nil, errors.New(ErrorInvalidUserData)
 	}
 	// Check if ngo exists
-	currentNgo, _ := FetchNgo(u.NgoID, tableName, dynaClient)
-	if currentNgo != nil && len(currentNgo.NgoID) == 0 {
+	currentNgo, _ := FetchNgo(u.NgoId, tableName, dynaClient)
+	if currentNgo != nil && len(currentNgo.NgoId) == 0 {
 		return nil, errors.New(ErrorUserDoesNotExists)
 	}
 	// Save ngo
@@ -130,13 +137,17 @@ func UpdateNgo(req events.APIGatewayProxyRequest, tableName string, dynaClient d
 func DeleteNgo(req events.APIGatewayProxyRequest, tableName string, dynaClient dynamodbiface.DynamoDBAPI) error {
 	//ngoId from req
 	ngoId := req.QueryStringParameters["ngoId"]
+
+	//Modifying the key for DynamoDB Storage
+	ngoId = "Ngo" + ngoId
+
 	input := &dynamodb.DeleteItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			"pk": {
 				S: aws.String(ngoId),
 			},
 			"sk": {
-				S: aws.String("details"),
+				S: aws.String("Details"),
 			},
 		},
 		TableName: aws.String(tableName),
