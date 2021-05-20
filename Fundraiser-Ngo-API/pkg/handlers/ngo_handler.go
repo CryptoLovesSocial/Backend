@@ -21,6 +21,16 @@ func GetNgo(req events.APIGatewayProxyRequest, tableName string, dynaClient dyna
 	return apiResponse(http.StatusOK, result)
 }
 
+func GetNgos(req events.APIGatewayProxyRequest, tableName string, dynaClient dynamodbiface.DynamoDBAPI) (
+	*events.APIGatewayProxyResponse,
+	error,
+) {
+	result, err := ngo.FetchNgos( tableName, dynaClient)
+	if err != nil {
+		return apiResponse(http.StatusBadRequest, ErrorBody{aws.String(err.Error())})
+	}
+	return apiResponse(http.StatusOK, result)
+}
 func CreateNgo(req events.APIGatewayProxyRequest, tableName string, dynaClient dynamodbiface.DynamoDBAPI) (
 	*events.APIGatewayProxyResponse,
 	error,

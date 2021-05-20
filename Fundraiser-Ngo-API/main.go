@@ -51,6 +51,8 @@ func handler(req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse
 		return handlers.UpdateNgo(req, tableName, dynaClient)
 	case "DELETE" + "|" + "deletengo":
 		return handlers.DeleteNgo(req, tableName, dynaClient)
+	case "GET" + "|" + "getngos":
+		return handlers.GetNgos(req, tableName, dynaClient)
 	default:
 		return handlers.UnhandledMethod()
 	}
