@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
+	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 )
 
 var (
@@ -68,21 +69,44 @@ func FetchNgo(ngoId string, tableName string, dynaClient dynamodbiface.DynamoDBA
 	}
 	return item, nil
 }
-func FetchNgos(tableName string, dynaClient dynamodbiface.DynamoDBAPI) (*[]Ngo, error) {
+func FetchNgos(countries string,categories string,tableName string, dynaClient dynamodbiface.DynamoDBAPI) (*[]Ngo, error) {
+	keyCond := expression.KeyAnd(
+		expression.Key("pk").Equal(expression.Value("DetailsNGO")),
+		expression.Key("sk").BeginsWith("Ngo"),
+	)
+
+	filt := expression.And(expression.Name("ngoCountry").Contains(countries), expression.Name("ngoCategory").Contains(categories))
+
+	expr, err := expression.NewBuilder().
+		WithKeyCondition(keyCond).
+		WithFilter(filt).
+		Build()
+	if err != nil {
+		return nil, err
+	}
+
+	input := &dynamodb.QueryInput{
+		TableName:                 aws.String(tableName),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		KeyConditionExpression:    expr.KeyCondition(),
+		FilterExpression:          expr.Filter(),
+	}
 
 	//Macking Call for DynamoDB
-	input := &dynamodb.QueryInput{
-		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-			":pk": {
-				S: aws.String("DetailsNGO"),
-			},
-			":sk": {
-				S: aws.String("Ngo"),
-			},
-		},
-		KeyConditionExpression: aws.String("pk = :pk AND begins_with(sk, :sk)"),
-		TableName:              aws.String(tableName),
-	}
+	// input := &dynamodb.QueryInput{
+	// 	ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+	// 		":pk": {
+	// 			S: aws.String("DetailsNGO"),
+	// 		},
+	// 		":sk": {
+	// 			S: aws.String("Ngo"),
+	// 		},
+	// 	},
+	// 	KeyConditionExpression: aws.String("pk = :pk AND begins_with(sk, :sk)"),
+	// 	FilterExpression: aws.String()
+	// 	TableName:              aws.String(tableName),
+	// }
 
 	result, err := dynaClient.Query(input)
 	if err != nil {
@@ -151,7 +175,13 @@ func UpdateNgo(req events.APIGatewayProxyRequest, tableName string, dynaClient d
 	if currentNgo != nil && len(currentNgo.NgoId) == 0 {
 		return nil, errors.New(ErrorUserDoesNotExists)
 	}
+	// println("yuppp")
+	// println(currentNgo.PK)
+	// println(currentNgo.NgoId)
+	// println(currentNgo.NgoCountry)
 	// Save ngo
+	u.PK = "DetailsNGO"
+	u.NgoId = "Ngo" + u.NgoId
 	av, err := dynamodbattribute.MarshalMap(u)
 	if err != nil {
 		return nil, errors.New(ErrorCouldNotMarshalItem)

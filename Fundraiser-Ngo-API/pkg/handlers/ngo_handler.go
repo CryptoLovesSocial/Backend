@@ -25,7 +25,9 @@ func GetNgos(req events.APIGatewayProxyRequest, tableName string, dynaClient dyn
 	*events.APIGatewayProxyResponse,
 	error,
 ) {
-	result, err := ngo.FetchNgos( tableName, dynaClient)
+	countries := req.QueryStringParameters["countries"]
+	categories := req.QueryStringParameters["categories"]
+	result, err := ngo.FetchNgos(countries,categories,tableName, dynaClient)
 	if err != nil {
 		return apiResponse(http.StatusBadRequest, ErrorBody{aws.String(err.Error())})
 	}
