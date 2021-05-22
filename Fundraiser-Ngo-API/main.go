@@ -32,27 +32,61 @@ const tableName = "NGOdetails"
 
 func handler(req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
 	switch req.HTTPMethod + "|" + req.PathParameters["method"] {
-	case "GET" + "|" + "getfundraiser":
-		return handlers.GetFundraiser(req, tableName, dynaClient)
-	case "POST" + "|" + "createfundraiser":
-		return handlers.CreateFundraiser(req, tableName, dynaClient)
-	case "PUT" + "|" + "updatefundraiser":
-		return handlers.UpdateFundraiser(req, tableName, dynaClient)
-	case "DELETE" + "|" + "deletefundraiser":
-		return handlers.DeleteFundraiser(req, tableName, dynaClient)
-	case "GET" + "|" + "getfundraisers":
-		return handlers.GetFundraisers(req, tableName, dynaClient)
-
-	case "GET" + "|" + "getngo":
+	//Handling request of NGO's
+	//PartitionKey = constant string of DetailsNGO
+	//SortKey = NgoId
+	case "GET" + "|" + "getNgo":
 		return handlers.GetNgo(req, tableName, dynaClient)
-	case "POST" + "|" + "createngo":
+	case "POST" + "|" + "createNgo":
 		return handlers.CreateNgo(req, tableName, dynaClient)
-	case "PUT" + "|" + "updatengo":
+	case "PUT" + "|" + "updateNgo":
 		return handlers.UpdateNgo(req, tableName, dynaClient)
-	case "DELETE" + "|" + "deletengo":
+	case "DELETE" + "|" + "deleteNgo":
 		return handlers.DeleteNgo(req, tableName, dynaClient)
-	case "GET" + "|" + "getngos":
+	case "GET" + "|" + "getNgos":
 		return handlers.GetNgos(req, tableName, dynaClient)
+
+	//Handling request of Fundraiser -> NGO(s)
+	//PartitionKey = NgoId
+	//SortKey = FundraiserId
+	case "GET" + "|" + "getFundraiserNgo":
+		return handlers.GetFundraiserNgo(req, tableName, dynaClient)
+	case "POST" + "|" + "createFundraiserNgo":
+		return handlers.CreateFundraiserNgo(req, tableName, dynaClient)
+	case "PUT" + "|" + "updateFundraiserNgo":
+		return handlers.UpdateFundraiserNgo(req, tableName, dynaClient)
+	case "DELETE" + "|" + "deleteFundraiserNgo":
+		return handlers.DeleteFundraiserNgo(req, tableName, dynaClient)
+	case "GET" + "|" + "getFundraisersNgo":
+		return handlers.GetFundraisersNgo(req, tableName, dynaClient)
+
+	//Handling request of Fundraiser -> Individual(s)
+	//PartitionKey = IndividualEmailId
+	//SortKey = FundraiserId
+	case "GET" + "|" + "getFundraiserIndividual":
+		return handlers.GetFundraiserIndividual(req, tableName, dynaClient)
+	case "POST" + "|" + "createFundraiserIndividual":
+		return handlers.CreateFundraiserIndividual(req, tableName, dynaClient)
+	case "PUT" + "|" + "updateFundraiserIndividual":
+		return handlers.UpdateFundraiserIndividual(req, tableName, dynaClient)
+	case "DELETE" + "|" + "deleteFundraiserIndividual":
+		return handlers.DeleteFundraiserIndividual(req, tableName, dynaClient)
+	case "GET" + "|" + "getFundraisersIndividual":
+		return handlers.GetFundraisersIndividual(req, tableName, dynaClient)
+
+	//Handling request of Update -> Fundraiser(s)
+	//PartitionKey = FundraiserId
+	//SortKey = UpdateId
+	case "GET" + "|" + "getUpdate":
+		return handlers.GetUpdate(req, tableName, dynaClient)
+	case "POST" + "|" + "createUpdate":
+		return handlers.CreateUpdate(req, tableName, dynaClient)
+	case "PUT" + "|" + "updateUpdate":
+		return handlers.UpdateUpdate(req, tableName, dynaClient)
+	case "DELETE" + "|" + "deleteUpdate":
+		return handlers.DeleteUpdate(req, tableName, dynaClient)
+	case "GET" + "|" + "getUpdates":
+		return handlers.GetUpdates(req, tableName, dynaClient)
 	default:
 		return handlers.UnhandledMethod()
 	}

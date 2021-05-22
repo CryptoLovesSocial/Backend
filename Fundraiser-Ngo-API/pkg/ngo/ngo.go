@@ -3,7 +3,6 @@ package ngo
 import (
 	"encoding/json"
 	"errors"
-	"log"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go/aws"
@@ -54,8 +53,6 @@ func FetchNgo(ngoId string, tableName string, dynaClient dynamodbiface.DynamoDBA
 
 	result, err := dynaClient.GetItem(input)
 	if err != nil {
-		log.Println("err1")
-		log.Println(err)
 		return nil, errors.New(ErrorFailedToFetchRecord)
 
 	}
@@ -64,17 +61,21 @@ func FetchNgo(ngoId string, tableName string, dynaClient dynamodbiface.DynamoDBA
 	item := new(Ngo)
 	err = dynamodbattribute.UnmarshalMap(result.Item, item)
 	if err != nil {
-		log.Println("err2")
 		return nil, errors.New(ErrorFailedToUnmarshalRecord)
 	}
 	return item, nil
 }
-func FetchNgos(countries string,categories string,tableName string, dynaClient dynamodbiface.DynamoDBAPI) (*[]Ngo, error) {
+func FetchNgos(countries string, categories string, tableName string, dynaClient dynamodbiface.DynamoDBAPI) (*[]Ngo, error) {
+	//For FetchNgos :-
+	//  (1) query for all Ngos 
+	//  (2) then filter out required data by filtering attribute
+	//Macking Key Condition for QueryInput
 	keyCond := expression.KeyAnd(
 		expression.Key("pk").Equal(expression.Value("DetailsNGO")),
 		expression.Key("sk").BeginsWith("Ngo"),
 	)
 
+	//Macking filter for QueryInput
 	filt := expression.And(expression.Name("ngoCountry").Contains(countries), expression.Name("ngoCategory").Contains(categories))
 
 	expr, err := expression.NewBuilder().
@@ -84,7 +85,7 @@ func FetchNgos(countries string,categories string,tableName string, dynaClient d
 	if err != nil {
 		return nil, err
 	}
-
+	//Macking Call for DynamoDB
 	input := &dynamodb.QueryInput{
 		TableName:                 aws.String(tableName),
 		ExpressionAttributeNames:  expr.Names(),
@@ -93,34 +94,15 @@ func FetchNgos(countries string,categories string,tableName string, dynaClient d
 		FilterExpression:          expr.Filter(),
 	}
 
-	//Macking Call for DynamoDB
-	// input := &dynamodb.QueryInput{
-	// 	ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-	// 		":pk": {
-	// 			S: aws.String("DetailsNGO"),
-	// 		},
-	// 		":sk": {
-	// 			S: aws.String("Ngo"),
-	// 		},
-	// 	},
-	// 	KeyConditionExpression: aws.String("pk = :pk AND begins_with(sk, :sk)"),
-	// 	FilterExpression: aws.String()
-	// 	TableName:              aws.String(tableName),
-	// }
-
 	result, err := dynaClient.Query(input)
 	if err != nil {
-		log.Println("err1")
-		log.Println(err)
 		return nil, errors.New(ErrorFailedToFetchRecord)
-
 	}
 
+	//Sending Get Request
 	var items *[]Ngo
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &items)
-
 	if err != nil {
-		log.Println(err)
 		return nil, errors.New(ErrorFailedToUnmarshalRecord)
 	}
 	return items, nil
@@ -132,14 +114,13 @@ func CreateNgo(req events.APIGatewayProxyRequest, tableName string, dynaClient d
 	//Checking if the correct request
 	var u Ngo
 	if err := json.Unmarshal([]byte(req.Body), &u); err != nil {
-		println("err1")
-		println(err)
 		return nil, errors.New(ErrorInvalidUserData)
 	}
 
 	//Modifying the key for DynamoDB Storage
 	u.PK = "DetailsNGO"
 	u.NgoId = "Ngo" + u.NgoId
+
 	//Marshaling the data
 	av, err := dynamodbattribute.MarshalMap(u)
 	if err != nil {
@@ -147,6 +128,7 @@ func CreateNgo(req events.APIGatewayProxyRequest, tableName string, dynaClient d
 		println(err)
 		return nil, errors.New(ErrorCouldNotMarshalItem)
 	}
+
 	//Puting it to DynamoDB
 	input := &dynamodb.PutItemInput{
 		Item:      av,
@@ -170,15 +152,13 @@ func UpdateNgo(req events.APIGatewayProxyRequest, tableName string, dynaClient d
 	if err := json.Unmarshal([]byte(req.Body), &u); err != nil {
 		return nil, errors.New(ErrorInvalidUserData)
 	}
+
 	// Check if ngo exists
 	currentNgo, _ := FetchNgo(u.NgoId, tableName, dynaClient)
 	if currentNgo != nil && len(currentNgo.NgoId) == 0 {
 		return nil, errors.New(ErrorUserDoesNotExists)
 	}
-	// println("yuppp")
-	// println(currentNgo.PK)
-	// println(currentNgo.NgoId)
-	// println(currentNgo.NgoCountry)
+
 	// Save ngo
 	u.PK = "DetailsNGO"
 	u.NgoId = "Ngo" + u.NgoId
@@ -203,7 +183,6 @@ func DeleteNgo(req events.APIGatewayProxyRequest, tableName string, dynaClient d
 
 	//Modifying the key for DynamoDB Storage
 	ngoId = "Ngo" + ngoId
-
 	input := &dynamodb.DeleteItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			"pk": {
@@ -215,6 +194,7 @@ func DeleteNgo(req events.APIGatewayProxyRequest, tableName string, dynaClient d
 		},
 		TableName: aws.String(tableName),
 	}
+
 	//Deleting the NGO
 	_, err := dynaClient.DeleteItem(input)
 	if err != nil {
